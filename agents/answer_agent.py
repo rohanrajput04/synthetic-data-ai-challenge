@@ -221,7 +221,7 @@ if __name__ == "__main__":
 
     # gen_kwargs = {"tgps_show": True, "max_new_tokens": 512, "temperature": 0.1, "top_p": 0.9, "do_sample": True}
     gen_kwargs = {"tgps_show": True}
-    with open("agen.yaml", "r") as f:
+    with open("../configs/agen.yaml", "r") as f:
         gen_kwargs.update(yaml.safe_load(f))
     answer, tls, gts = agent.answer_batches(
         questions=sample_questions, batch_size=args.batch_size, **gen_kwargs

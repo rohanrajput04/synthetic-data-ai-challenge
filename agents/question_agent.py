@@ -305,14 +305,14 @@ if __name__ == "__main__":
     )
     args = argparser.parse_args()
 
-    inc_samples = QuestioningAgent.load_icl_samples("assets/topics_example.json")
+    inc_samples = QuestioningAgent.load_icl_samples("../examples/topics_example.json")
 
-    with open("assets/topics.json") as f:
+    with open("../examples/topics.json") as f:
         topics = json.load(f)
 
     agent = QuestioningAgent()
     gen_kwargs = {"tgps_show": True}
-    with open("qgen.yaml", "r") as f:
+    with open("../configs/qgen.yaml", "r") as f:
         gen_kwargs.update(yaml.safe_load(f))
 
     question, tls, gts = agent.generate_batches(
