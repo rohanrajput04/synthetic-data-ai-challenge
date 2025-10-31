@@ -1,0 +1,520 @@
+# Logical Reasoning Training Configuration for Synthetic Data Kit
+
+# Global paths configuration
+paths:
+  input: "data/input"           # Source PDFs and text files
+  output:
+    parsed: "data/parsed"       # Extracted text files (.txt)
+    generated: "data/generated" # Generated QA pairs and CoT (.json)
+    curated: "data/curated"     # Quality-filtered data (.json)
+    final: "data/final"         # Training-ready format (.json)
+
+# LLM Provider configuration
+llm:
+  provider: "vllm"
+
+# vLLM server configuration
+vllm:
+  api_base: "http://localhost:8001/v1"
+  port: 8001
+  model: "Unsloth/Llama-3.3-70B-Instruct"
+  max_retries: 3
+  retry_delay: 1.0
+  sleep_time: 0.1   # Small delay between batches to avoid rate limits
+
+# Document processing configuration
+ingest:
+  default_format: "txt"
+  youtube_captions: "auto"
+
+# LLM generation parameters optimized for logical reasoning
+generation:
+  temperature: 0.7   # Balanced creativity for reasoning problems
+  top_p: 0.95
+  
+  # Document processing strategy
+  processing_strategy: "auto"
+  single_call_max_size: 8000
+  
+  # Chunking parameters for large documents
+  chunk_size: 4000   # Good size for logical reasoning content
+  overlap: 300       # Maintain context between chunks
+  
+  # Content generation targets
+  num_pairs: 300  # QA pairs per document/chunk
+  num_cot_examples: 10  # Chain of Thought examples per document/chunk
+  
+  # Model parameters
+  max_tokens: 4096   # Allow detailed explanations
+  batch_size: 24     # Reasonable batch size for reasoning tasks
+  
+  # Quality settings
+  enable_deduplication: true
+  similarity_threshold: 0.85  # Remove very similar problems
+
+# Content curation parameters - stricter for reasoning quality
+curate:
+  threshold: 8.5     # Higher threshold for logical reasoning quality
+  batch_size: 5      # Smaller batches for more careful evaluation
+  inference_batch: 5
+  temperature: 0.1   # Low temperature for consistent quality ratings
+
+# Format conversion parameters
+format:
+  default: "alpaca"  # Use Alpaca format for fine-tuning
+  include_metadata: true
+  pretty_json: true
+
+# Specialized prompts for logical reasoning domains
+prompts:
+  # Summary generation for logical reasoning content
+  summary: |
+    Summarize this logical reasoning content in 3-5 sentences, focusing on:
+    1. The type of logical problems covered
+    2. Key solving strategies mentioned
+    3. Important concepts and principles
+    
+  # QA pair generation optimized for logical reasoning
+  qa_generation: |
+    Create {num_pairs} high-quality logical reasoning question-answer pairs from this educational content.
+    
+    Focus on problems that require:
+    1. Step-by-step logical deduction
+    2. Testing assumptions and eliminating contradictions
+    3. Clear reasoning explanations
+    4. Progressive difficulty (basic → intermediate → advanced)
+    
+    Domain Guidelines:
+    - Seating Arrangements: Focus on constraint satisfaction, systematic placement
+    - Blood Relations: Focus on family tree deduction, relationship mapping
+    
+    Return ONLY valid JSON in this exact format:
+    [
+      {{
+        "question": "Clear, specific logical reasoning question requiring step-by-step thinking?",
+        "answer": "Complete step-by-step solution showing the reasoning process, testing assumptions, and reaching the final answer.",
+        "difficulty": "basic",
+        "domain": "seating"
+      }},
+      {{
+        "question": "Another logical reasoning question with different complexity?",
+        "answer": "Detailed answer showing each deduction step, how contradictions are resolved, and verification of the solution.",
+        "difficulty": "intermediate", 
+        "domain": "seating"
+      }}
+    ]
+    
+    Text:
+    {text}
+  
+  # Chain of Thought generation for complex logical reasoning
+  cot_generation: |
+    You are an ELITE LOGICAL REASONING ARCHITECT and COMPETITIVE AI TRAINER specializing in chain-of-thought problem solving for adversarial competitions and You are an ELITE LLM JUDGE and COMPETITIVE PROGRAMMING CURATOR with expertise in:
+    
+    - ACM ICPC problem design
+    - Olympiad-grade logical reasoning assessment
+    - Adversarial question generation for AI battles
+    - Format compliance for automated evaluators
+    
+    
+    Competition Context
+    - Head-to-head AI battle.
+    - Your Q-Agent generates questions; your A-Agent must answer opponents’ questions in <6s.
+    - Score = (Questions opponents fail) + (Questions you answer correctly).
+    
+    Your mission: Generate {{num_pairs}} TRAINING-OPTIMIZED chain-of-thought problems that teach your A-Agent to solve complex logical reasoning in UNDER 6 SECONDS while maximizing opponent failure rates.
+    
+    COMPETITION CONTEXT
+    
+    This trains your A-Agent to:
+    
+    Defeat opponent Q-Agents by correctly answering their hardest questions
+    
+    Solve systematically using learnable, repeatable reasoning patterns
+    
+    Handle complexity through structured thinking (no guessing)
+    
+    Execute in less than 6 seconds under pressure
+    
+    CRITICAL BALANCE PRINCIPLE
+    
+    THE GOLDILOCKS ZONE: Problems must hit the perfect difficulty sweet spot:
+    
+    HARD enough that untrained opponents fail (50-70% opponent failure rate)
+    
+    SYSTEMATIC enough that your trained agent solves correctly (80-90% your success rate)
+    
+    FAST enough to solve in under 6 seconds
+    
+    PATTERN-BASED so your agent learns through repetition, not memorization
+    
+    Avoid two extremes:
+    
+    TOO EASY: Both you and opponents answer correctly (no competitive advantage)
+    
+    TOO HARD: Neither you nor opponents can answer in time (you lose points too)
+    
+    Perfect balance = Learnable systematic patterns + moderate complexity = you win
+    
+    STRICT OUTPUT FORMAT
+    
+    Return ONLY valid JSON array:
+    
+    [
+      {{
+        "question": "Multi-step logical reasoning problem requiring systematic constraint analysis",
+        "reasoning": "STEP 1 - EXTRACT ALL CONSTRAINTS:\nList every constraint explicitly:\n- Constraint 1: [specific]\n- Constraint 2: [specific]\n\nSTEP 2 - IDENTIFY MOST RESTRICTIVE:\nConstraint [X] limits possibilities to [set].\n\nSTEP 3 - ENUMERATE POSSIBILITIES:\n- Possibility A: [description]\n- Possibility B: [description]\n\nSTEP 4 - TEST SYSTEMATICALLY:\nTesting A:\n- Constraint 2: [Pass/Fail because...]\nConclusion: [VALID/INVALID]\n\nTesting B:\n- Constraint 2: [Pass/Fail because...]\nConclusion: [VALID/INVALID]\n\nSTEP 5 - VERIFY SOLUTION:\nValid configuration: [solution]\n✓ Constraint 1: [check]\n✓ Constraint 2: [check]\n\nSTEP 6 - FINAL ANSWER:\n[Answer] because [key insight].",
+        "answer": "Final answer: [Specific answer]. This is the unique solution because it satisfies all [N] constraints simultaneously.",
+        "domain": "seating_linear"
+      }}
+    ]
+    
+    DOMAIN SPECIFICATIONS
+    DOMAIN 1: SEATING ARRANGEMENTS - LINEAR (25%)
+    
+    Type: seating_linear (people sitting in a row)
+    
+    4–5 people
+    
+    4–5 constraints
+    
+    5–6 reasoning steps
+    
+    1–2 conditional constraints max
+    
+    Key Patterns: Position Locking, Adjacency Cascade, Most Restrictive First, Systematic Elimination
+    Common Constraints: Absolute position, relative position, adjacency, non-adjacency, conditional, directional
+    
+    DOMAIN 2: SEATING ARRANGEMENTS - CIRCULAR (25%)
+    
+    Type: seating_circular (people sitting around a circular table)
+    
+    4–5 people
+    
+    4–5 constraints
+    
+    5–6 reasoning steps
+    
+    Focus on relative positions
+    
+    Key Patterns: Reference Point Locking, Circular Adjacency, Opposite Positioning, Relative Distance
+    Common Constraints: Opposite to, adjacent to, between X and Y, seats clockwise from, not next to, facing center
+    
+    DOMAIN 3: BLOOD RELATIONS & FAMILY TREE (35%)
+    
+    Type: blood_relations or family_tree
+    
+    5–6 family members
+    
+    3–4 relationship hops
+    
+    2–3 generations max
+    
+    5–6 reasoning steps
+    
+    Key Patterns: Relationship Chain, Gender Inference, Symmetric Relations, Generation Counting, Reverse Deduction
+    Common Relationships: Father, mother, son, daughter, brother, sister, uncle, aunt, nephew, niece, cousin, in-laws
+    
+    DOMAIN 4: HYBRID PROBLEMS (15%)
+    
+    Type: hybrid_seating_relations (combine seating and blood relations)
+    
+    4–5 family members
+    
+    5–6 total constraints (3 seating, 2–3 relations)
+    
+    6–7 reasoning steps
+    
+    Hybrid Examples:
+    
+    "A family sits around a circular table. Father sits opposite daughter. Son sits adjacent to mother. Uncle sits 2 seats from nephew. Who sits between grandmother and grandson?"
+    
+    "Six relatives sit in a row. Person A's father is at position 3. Person B (A's sibling) sits 2 seats from their mother, uncle at one end. Where does the grandmother sit?"
+    
+    Hybrids confuse opponents but are learnable for your agent.
+    
+    CRITICAL COMPETITIVE EDGE: Include 15% HYBRID problems that combine BOTH seating arrangements (linear/circular) AND blood relations in a single question (e.g., "A family sits around a circular table where the father sits opposite his daughter, the son sits 2 seats from his uncle..."). These domain-mixing problems will maximally confuse opponent A-Agents who are trained on single-domain problems, while your agent will be specifically trained to handle these combinations, giving you a decisive scoring advantage.
+    
+    Remember: These questions determine victory or defeat. Make every question count. Make opponents’ A-Agents struggle. Make your Q-Agent legendary and your A-Agent unstoppable and fast to answer less than 6 seconds.
+    
+    
+    DIFFICULTY DISTRIBUTION
+    Level	Share	Constraints	Steps	Goal
+    Basic	40%	3–4	4–5	Fast, high confidence
+    Intermediate	45%	4–5	5–6	Competitive zone
+    Advanced	15%	5–6	6–7	Elite differentiation
+    CHAIN-OF-THOUGHT STRUCTURE
+    
+    Extract all constraints
+    
+    Identify most restrictive
+    
+    Enumerate possibilities
+    
+    Test each possibility
+    
+    Verify solution
+    
+    Final answer with key insight
+    
+    TRAINING PRINCIPLES
+    
+    Show all possibilities
+    
+    Explicit contradictions: “Violates Constraint X because…”
+    
+    Verify all constraints
+    
+    Prefer systematic reasoning over guessing
+    
+    Repeatable patterns = faster learning
+    
+    Reasoning Pattern Distribution:
+    
+    35% Constraint Elimination
+    
+    25% Position Locking
+    
+    15% Circular Reference
+    
+    15% Relationship Chain
+    
+    10% Hybrid Cascade
+    
+    ADVERSARIAL DESIGN
+    
+    Make opponents fail without sacrificing speed:
+    
+    2–3 traps that fail one constraint
+    
+    Moderate constraint interaction
+    
+    Max 6 entities or constraints
+    
+    Requires systematic reasoning
+    
+    Keep your agent fast and accurate:
+    
+    Use learnable patterns
+    
+    No backtracking
+    
+    Clear 6-step structure
+    
+    Balanced difficulty
+    
+    QUALITY CHECKLIST
+    
+    Valid JSON with fields: question, reasoning, answer, domain
+    
+    Domain: seating_linear, seating_circular, blood_relations, family_tree, hybrid_seating_relations
+    
+    4–6 reasoning steps
+    
+    4–5 constraints for seating, 3–4 relationship hops for relations
+    
+    Solvable in under 6 seconds
+    
+    Uses one of five core reasoning patterns
+    
+    Balanced difficulty for systematic learning
+    
+    GENERATION INSTRUCTIONS
+    
+    Domain distribution:
+    
+    25% seating_linear
+    
+    25% seating_circular
+    
+    35% blood_relations/family_tree
+    
+    15% hybrid_seating_relations
+    
+    Difficulty distribution:
+    
+    40% basic
+    
+    45% intermediate
+    
+    15% advanced
+    
+    Balance Check:
+    
+    Solvable systematically in 5–6 steps?
+    
+    Would untrained agent struggle?
+    
+    Can trained agent learn the pattern?
+    
+    Solvable in under 6 seconds?
+    
+    Pattern repetition is good; it reinforces learning, but at the same time we should not give any scope to the other teams answering agent to detect our pattterns.
+    
+    Text:
+    {text}
+  
+  # Quality rating prompt for logical reasoning content
+  qa_rating: |
+    You are an ELITE COMPETITIVE AI JUDGE specializing in evaluating logical reasoning problems for adversarial AI competitions.
+
+    Your mission: Rate each question-answer pair on a scale from 1-10 based on its COMPETITIVE VALUE — how well it will help your A-Agent win while making opponents fail.
+    
+    COMPETITION-FOCUSED RATING CRITERIA
+    COMPETITIVE BALANCE (0-4 points) — MOST IMPORTANT
+    
+    Does this problem hit the Goldilocks Zone?
+    
+    4 points: Perfect balance — systematic solution exists (under 6 seconds), but untrained agents fail 50–70%
+    
+    3 points: Good balance — solvable with training, challenging for opponents
+    
+    2 points: Too easy — both trained and untrained agents solve it
+    
+    1 point: Too hard — even trained agents struggle or timeout
+    
+    0 points: Unsolvable or arbitrary (not pattern-based)
+    
+    Key checks:
+    
+    Can it be solved systematically in 4–6 reasoning steps?
+    
+    Uses learnable reasoning pattern (constraint elimination, position locking, etc.)?
+    
+    Has 4–5 constraints (not 8+)?
+    
+    Solvable in under 6 seconds with proper training?
+    
+    Would it confuse untrained opponents?
+    
+    TECHNICAL CORRECTNESS (0-3 points)
+    
+    Is the logic flawless?
+    
+    3 points: Perfect logic, all constraints consistent, unique correct answer, complete verification
+    
+    2 points: Logic sound but minor issues (incomplete verification or unclear wording)
+    
+    1 point: Logic mostly correct but has ambiguities
+    
+    0 points: Logic errors, contradictions, or multiple valid answers
+    
+    Key checks:
+    
+    All constraints consistent?
+    
+    Exactly one correct answer?
+    
+    All reasoning steps valid?
+    
+    Verification checks all constraints?
+    
+    TRAINING VALUE (0-3 points)
+    
+    Will this teach your A-Agent to win?
+    
+    3 points: Uses standard reasoning pattern, systematic approach, tests all possibilities, identifies contradictions
+    
+    2 points: Good reasoning structure but missing some teaching elements
+    
+    1 point: Shows answer but not generalizable
+    
+    0 points: No clear reasoning or teaching value
+    
+    Key checks:
+    
+    Explicitly numbered steps (STEP 1, STEP 2, etc.)?
+    
+    Tests all possibilities, not just correct one?
+    
+    Shows why wrong options fail?
+    
+    Includes verification with ✓ marks?
+    
+    Uses one of the core reasoning patterns?
+    
+    RATING SCALE INTERPRETATION
+    
+    9–10: ELITE — Perfect competitive weapon
+    Goldilocks difficulty, flawless logic, excellent teaching value. Use in competition.
+    
+    7–8: STRONG — High competitive value
+    Good balance and logic, minor improvements possible. Use in training and competition.
+    
+    5–6: ACCEPTABLE — Needs improvement
+    Slightly too easy or too hard, logic correct but unclear. Use in training only.
+    
+    3–4: WEAK — Significant issues
+    Poor balance or logic errors. Needs major revision.
+    
+    1–2: REJECT — Not usable
+    Too easy, too hard, or illogical. Discard or redesign.
+    
+    DOMAIN-SPECIFIC CONSIDERATIONS
+    SEATING_LINEAR / SEATING_CIRCULAR
+    
+    4–5 people, 4–5 constraints
+    
+    Must have systematic position-locking or elimination pattern
+    
+    Circular must use only relative positions (no “position 1”)
+    
+    Solvable in 4–5 seconds
+    
+    BLOOD_RELATIONS / FAMILY_TREE
+    
+    5–6 people, 3–4 relationship hops, 2–3 generations
+    
+    Must have clear relationship chain pattern
+    
+    Include gender inference if needed
+    
+    Solvable in 4–5 seconds
+    
+    HYBRID_SEATING_RELATIONS
+    
+    Must combine both domains genuinely
+    
+    5–6 total constraints (3 seating, 2–3 relations)
+    
+    Interleaved reasoning patterns
+    
+    Advanced tier (5–6 seconds)
+    
+    Rate slightly higher (secret weapon)
+
+    RATING INSTRUCTIONS
+    
+    For the QA pairs below:
+    
+    Evaluate each pair using the COMPETITIVE BALANCE (0–4) + TECHNICAL CORRECTNESS (0–3) + TRAINING VALUE (0–3) criteria
+    
+    Assign total rating from 1–10
+    
+    Provide a one-sentence reasoning summary
+    
+    STRICT OUTPUT FORMAT
+    
+    For one pair:
+    
+    {{
+      "question": "Exact question text from input",
+      "answer": "Exact answer text from input",
+      "rating": 8,
+      "reasoning": "Brief one-sentence justification for rating"
+    }}
+    
+    
+    For multiple pairs:
+    
+    [
+      {{"question": "Q1 exact text", "answer": "A1 exact text", "rating": 8, "reasoning": "Balanced difficulty, clear pattern, good training value"}},
+      {{"question": "Q2 exact text", "answer": "A2 exact text", "rating": 6, "reasoning": "Too easy, both agents will solve, low competitive value"}},
+      {{"question": "Q3 exact text", "answer": "A3 exact text", "rating": 9, "reasoning": "Perfect Goldilocks zone, hybrid problem, excellent training"}}
+    ]
+    
+    
+    Return only a valid JSON array
+    *** RETURN ONLY JSON - NO EXPLANATION OR MARKDOWN ***
+    QA pairs to rate:
+    {pairs}
